@@ -4,6 +4,8 @@ var url = "mongodb://localhost:27017/";
 MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("test");
+
+    //Tutaj tworzymy jest kolekcja tylko z id i datą wypożyczenia
     dbo.collection('students').aggregate(
         [
             {
@@ -12,7 +14,50 @@ MongoClient.connect(url, function (err, db) {
                         from: "books",
                         localField: "_id",
                         foreignField: "_id",
-                        as: "rentals"
+                        as: "books"
+                    }
+            },
+            {
+                $project: {
+                    name: 0,
+                    scores: 0,
+                    "books.isbn": 0,
+                    "books.thumbnailUrl": 0,
+                    "books.status": 0,
+                    "books.longDescription": 0,
+                    "books.shortDescription": 0,
+                    "books.categories": 0,
+                    "books.authors": 0,
+                    "books.categories": 0,
+                    "books.publishedDate": 0,
+                    "books.pageCount": 0,
+                    "books.title": 0
+                }
+            },
+            {
+                $addFields: {
+                    "books.date": generateRandomDate(new Date().setFullYear(2017, 0, 1), new Date().setFullYear(2018, 05, 30))
+                }
+            },
+            {
+                $out: "rentals"
+            }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    // Ta kolekcja może być zbędna jak zrezygnujemy z tych łączonych
+    dbo.collection('students').aggregate(
+        [
+            {
+                $lookup:
+                    {
+                        from: "books",
+                        localField: "_id",
+                        foreignField: "_id",
+                        as: "books"
                     }
             },
             {
@@ -37,7 +82,6 @@ MongoClient.connect(url, function (err, db) {
         if (err) throw err;
         console.log(result);
     });
-
 
     dbo.collection('books').aggregate(
         [
@@ -135,32 +179,8 @@ MongoClient.connect(url, function (err, db) {
 
     // aggregations only for students collection
     // TODO
-    //
-    //
     // aggregations only for rentals collection
-
-    dbo.collection('rentals').aggregate(
-        [
-            {
-                $sample: {size: 100}
-            },
-            {
-                $addFields: {
-                    open: generateRandomDate(new Date().setFullYear(2017, 0, 1), new Date().setFullYear(2018, 05, 30))
-                }
-            }
-            //TODO To trzeba jeszcze przemyśleć, czy robimy te z datami, czy jednak tworzymy id, id,
-            //TODO bo chyba jednak to nie jest trudne, a ta kolekcja coś mi nie pasuje, bo powielamy dane
-            // ,
-            // {
-            //     $out : "Rentals with dates"
-            // }
-
-        ]
-    ).toArray(function (err, result) {
-        if (err) throw err;
-        console.log(result);
-    });
+    // TODO
 
 });
 
