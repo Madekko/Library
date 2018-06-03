@@ -5,7 +5,8 @@ MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("test");
 
-    //Tutaj tworzymy jest kolekcja tylko z id i datą wypożyczenia
+    //
+    // Tutaj tworzymy jest kolekcja tylko z id i datą wypożyczenia
     dbo.collection('students').aggregate(
         [
             {
@@ -269,8 +270,105 @@ MongoClient.connect(url, function (err, db) {
     });
 
 
-    // aggregations only for rentals collection
-    // TODO
+    //aggregations only for rentals collection
+
+    dbo.collection('rentals').aggregate([
+            {
+                $project: {
+                    _id: 1,
+                    NumberOfBooks: {$size: "$books"}
+                }
+
+            },
+            {$match: {"NumberOfBooks": {$gte: 1}}},
+        {
+            $count: "StudentsWithAtleast1Book"
+        }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    //Student without renting any book and still score>98
+    dbo.collection('rentals').aggregate([
+        {
+            $match: {$and: [{"books": { $not: {$size: 1}}}, {$and: [{"scores.type": "exam"}, {"scores.score": {$gt: 98}}]}]}
+        },
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    //Students count with book and low exam score
+    dbo.collection('rentals').aggregate([
+            {
+                $match: {$and: [{"books": { $not: {$size: 0}}}, {$and: [{"scores.type": "exam"}, {"scores.score": {$lt: 10}}]}]}
+            },
+        {
+            $count: "StudentsWithBooksAndExamScoreLT10"
+        }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    // Students without book and all results >90
+    // NOT WORKING, WHY?? problem with multiple $and
+    dbo.collection('rentals').aggregate([
+            {
+                $match: {$and: [{"books": { $not: {$size: 1}}},
+                        {
+                            $and: [{"scores.type": "exam"}, {"scores.score": {$gt: 98}},
+                                    {"scores.type": "homework"}, {"scores.score": {$gt: 98}},
+                                    {"scores.type": "quiz"}, {"scores.score": {$gt: 98}}]}]}
+
+            }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+
+    //NIE WIEM CZY LEPIEJ WYSWIETLIC TE OSOBY CZY ZLICZYĆ WIEC NIZEJ JEST ZLICZENIE
+    dbo.collection('rentals').aggregate([
+            {
+                $match: {$and: [{"books.pageCount": { $gt: 400}}, {$and: [{"scores.type": "quiz"}, {"scores.score": {$gt: 99}}]}]}
+            },
+            {
+                $count: "NumberOfStudentsWithLongBookAndScoreGT99"
+            }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    dbo.collection('rentals').aggregate([
+            {
+                $match: {$and: [{"books.pageCount": { $gt: 400}}, {$and: [{"scores.type": "quiz"}, {"scores.score": {$gt: 99}}]}]}
+            }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    dbo.collection('rentals').aggregate([
+            {
+                $match: {$and: [{"books.pageCount": { $lt: 40}}, {$and: [{"scores.type": "homework"}, {"scores.score": {$lt: 10}}]}]}
+            },
+            {
+                $count: "NumberOfStudentsWithShortBookAndScoreLT10"
+            }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
 
 });
 
