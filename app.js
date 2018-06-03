@@ -48,7 +48,7 @@ MongoClient.connect(url, function (err, db) {
         console.log(result);
     });
 
-    // Ta kolekcja może być zbędna jak zrezygnujemy z tych łączonych
+    //Ta kolekcja może być zbędna jak zrezygnujemy z tych łączonych
     dbo.collection('students').aggregate(
         [
             {
@@ -174,11 +174,101 @@ MongoClient.connect(url, function (err, db) {
             }
         ]
     ).toArray(function (err, result) {
+        console.log(result)
         if (err) throw err;
     });
 
     // aggregations only for students collection
-    // TODO
+    dbo.collection('students').aggregate(
+        [
+            {$unwind: "$scores"},
+            {
+                $match: {"scores.type": "exam"}
+            },
+            {$sort: {"scores.score": 1}},
+            {
+                $group: {
+                    _id: "$_id",
+                    maxExamScore: {$max: "$scores.score"}
+                }
+            },
+            {
+                $limit: 1
+            }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    dbo.collection('students').aggregate(
+        [
+            {$unwind: "$scores"},
+            {
+                $match: {$and: [{"scores.type": "homework"}, {"scores.score": {$gt: 99}}]}
+            },
+            {
+                $project:
+                    {
+                        name: 1,
+                        scores: 1,
+                        _id: 0
+                    }
+            }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    dbo.collection('students').aggregate(
+        [
+            {$unwind: "$scores"},
+            {
+                $match: {$and: [{"scores.type": "quiz"}, {"scores.score": {$lt: 10}}]}
+            },
+            {
+                $group: {_id: null, count: {$sum: 1}}
+            }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    dbo.collection('students').find( {
+        scores: { $all: [
+                { "$elemMatch" : { type: "exam", score: { $gt: 90} } },
+                { "$elemMatch" : { type: "quiz", score: { $gt: 90} } },
+                { "$elemMatch" : { type: "homework", score: { $gt: 90} } }
+            ]},
+    }).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+    dbo.collection('students').aggregate(
+        [
+            {$unwind: "$scores"},
+            {
+                $match: {$or: [ {$and: [{"scores.type": "quiz"}, {"scores.score": {$gt: 99}}]},
+                        {$and: [{"scores.type": "exam"}, {"scores.score": {$gt: 99}}]}]}
+            },
+            {
+                $project:
+                    {
+                        name: 1,
+                        scores: 1,
+                        _id: 0
+                    }
+            }
+        ]
+    ).toArray(function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
+
+
     // aggregations only for rentals collection
     // TODO
 
